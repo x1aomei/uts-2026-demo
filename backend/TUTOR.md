@@ -1,75 +1,84 @@
-# Cloth Store — Backend (Laravel)
+Dokumen panduan (`tutor.md`) telah dirapikan agar lebih terstruktur, konsisten, dan nyaman dibaca. Seluruh istilah teknis tetap dipertahankan, sementara narasi serta penjelasan disajikan dalam bahasa Indonesia yang baku, jelas, dan profesional.
 
-Backend API untuk website Cloth Store menggunakan **Laravel**, **MySQL**, autentikasi via **Google OAuth (Login & Register)**, dan pembayaran via **Midtrans** (testing lokal menggunakan **ngrok** untuk webhook).
+---
+
+# Cloth Store — Panduan Integrasi Backend (Laravel)
+
+Dokumen ini berisi panduan langkah demi langkah untuk membangun dan mengonfigurasi Backend API platform *e-commerce* **Cloth Store**. Dokumentasi ini mencakup integrasi **Laravel**, **MySQL**, **Google OAuth** untuk autentikasi, serta **Midtrans** (menggunakan **ngrok** untuk pengujian *webhook* lokal) untuk sistem pembayaran.
 
 ---
 
 ## 📋 Daftar Isi
 
-1. [Requirement](#1-requirement)
-2. [Instalasi Project Laravel](#2-instalasi-project-laravel)
-3. [Setup Environment (.env) — MySQL](#3-setup-environment-env--mysql)
-4. [Setup Database MySQL](#4-setup-database-mysql)
-5. [Struktur Database & Migration](#5-struktur-database--migration)
-6. [Setup Google OAuth (Login & Register)](#6-setup-google-oauth-login--register)
-7. [Alur Autentikasi Google](#7-alur-autentikasi-google)
-8. [Setup Midtrans (Payment)](#8-setup-midtrans-payment)
-9. [Setup ngrok untuk Webhook Midtrans](#9-setup-ngrok-untuk-webhook-midtrans)
-10. [Alur Payment (Checkout → Payment → Webhook)](#10-alur-payment-checkout--payment--webhook)
-11. [Menjalankan Project](#11-menjalankan-project)
-12. [Struktur Folder Penting](#12-struktur-folder-penting)
-13. [Testing API (Ringkas)](#13-testing-api-ringkas)
-14. [Troubleshooting](#14-troubleshooting)
+1. [Prasyarat Sistem](https://www.google.com/search?q=%231-prasyarat-sistem)
+2. [Instalasi Proyek Laravel](https://www.google.com/search?q=%232-instalasi-proyek-laravel)
+3. [Konfigurasi Lingkungan (.env) — MySQL](https://www.google.com/search?q=%233-konfigurasi-lingkungan-env--mysql)
+4. [Inisialisasi Database MySQL](https://www.google.com/search?q=%234-inisialisasi-database-mysql)
+5. [Skema Database & Migrasi](https://www.google.com/search?q=%235-skema-database--migrasi)
+6. [Konfigurasi Google OAuth](https://www.google.com/search?q=%236-konfigurasi-google-oauth)
+7. [Alur Autentikasi Google](https://www.google.com/search?q=%237-alur-autentikasi-google)
+8. [Konfigurasi Midtrans Payment Gateway](https://www.google.com/search?q=%238-konfigurasi-midtrans-payment-gateway)
+9. [Konfigurasi ngrok untuk Webhook Midtrans](https://www.google.com/search?q=%239-konfigurasi-ngrok-untuk-webhook-midtrans)
+10. [Alur Transaksi & Pembayaran](https://www.google.com/search?q=%2310-alur-transaksi--pembayaran)
+11. [Petunjuk Menjalankan Aplikasi](https://www.google.com/search?q=%2311-petunjuk-menjalankan-aplikasi)
+12. [Struktur Direktori Penting](https://www.google.com/search?q=%2312-struktur-direktori-penting)
+13. [Panduan Pengujian API](https://www.google.com/search?q=%2313-panduan-pengujian-api)
+14. [Penanganan Masalah (Troubleshooting)](https://www.google.com/search?q=%2314-penanganan-masalah-troubleshooting)
 
 ---
 
-## 1. Requirement
+## 1. Prasyarat Sistem
 
-Pastikan sudah terinstall:
+Sebelum memulai, pastikan perangkat pengembangan Anda telah terpasang dependensi berikut:
 
-- PHP >= 8.2
-- Composer
-- MySQL >= 8.0
-- Node.js & NPM (opsional, untuk asset jika perlu)
-- ngrok (untuk expose localhost ke internet — dipakai webhook Midtrans)
-- Akun Google Cloud Console (untuk kredensial OAuth)
-- Akun Midtrans Sandbox (untuk kredensial payment)
+* **PHP** >= 8.2
+* **Composer** (Manajer paket PHP)
+* **MySQL** >= 8.0
+* **Node.js & NPM** (Opsional, untuk kompilasi *asset*)
+* **ngrok** (Perkakas *tunneling* untuk mengekspos *server* lokal ke internet)
+* **Akun Google Cloud Console** (Untuk mendapatkan kredensial Google OAuth)
+* **Akun Midtrans Sandbox** (Untuk pengujian *payment gateway*)
 
 ---
 
-## 2. Instalasi Project Laravel
+## 2. Instalasi Proyek Laravel
+
+Jalankan perintah berikut pada terminal Anda untuk membuat proyek baru dan menginstal pustaka (*package*) yang dibutuhkan:
 
 ```bash
-# Buat project Laravel baru
+# 1. Buat proyek Laravel baru
 composer create-project laravel/laravel cloth-store-backend
 
+# 2. Masuk ke direktori proyek
 cd cloth-store-backend
 
-# Install package untuk Google OAuth
+# 3. Instal Laravel Socialite (Untuk Google OAuth)
 composer require laravel/socialite
 
-# Install package untuk Sanctum (API Token Auth, dipakai setelah login Google sukses)
+# 4. Instal Laravel Sanctum (Autentikasi API berbasis Token)
 composer require laravel/sanctum
 
-# Publish config Sanctum
+# 5. Publikasikan berkas konfigurasi Sanctum
 php artisan vendor:publish --provider="Laravel\Sanctum\SanctumServiceProvider"
 
-# Install package Midtrans (PHP SDK resmi)
+# 6. Instal SDK Resmi Midtrans PHP
 composer require midtrans/midtrans-php
+
 ```
 
 ---
 
-## 3. Setup Environment (.env) — MySQL
+## 3. Konfigurasi Lingkungan (.env) — MySQL
 
-Copy file `.env.example` menjadi `.env`:
+Duplikasi berkas `.env.example` menjadi `.env`, lalu buat *application key* baru:
 
 ```bash
 cp .env.example .env
 php artisan key:generate
+
 ```
 
-Edit file `.env`, sesuaikan bagian berikut:
+Buka berkas `.env` dan sesuaikan nilainya dengan konfigurasi berikut:
 
 ```env
 APP_NAME="Cloth Store"
@@ -78,9 +87,9 @@ APP_KEY=base64:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 APP_DEBUG=true
 APP_URL=http://localhost:8000
 
-# ==========================
-# DATABASE (MYSQL)
-# ==========================
+# ==========================================
+# KONFIGURASI DATABASE (MYSQL)
+# ==========================================
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
@@ -88,22 +97,22 @@ DB_DATABASE=cloth_store_db
 DB_USERNAME=root
 DB_PASSWORD=
 
-# ==========================
-# GOOGLE OAUTH
-# ==========================
+# ==========================================
+# KONFIGURASI GOOGLE OAUTH
+# ==========================================
 GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
 GOOGLE_CLIENT_SECRET=your-google-client-secret
 GOOGLE_REDIRECT_URI=http://localhost:8000/api/auth/google/callback
 
-# ==========================
-# SANCTUM
-# ==========================
+# ==========================================
+# KONFIGURASI SANCTUM
+# ==========================================
 SANCTUM_STATEFUL_DOMAINS=localhost:3000
 SESSION_DOMAIN=localhost
 
-# ==========================
-# MIDTRANS
-# ==========================
+# ==========================================
+# KONFIGURASI MIDTRANS
+# ==========================================
 MIDTRANS_MERCHANT_ID=your-merchant-id
 MIDTRANS_CLIENT_KEY=SB-Mid-client-xxxxxxxxxxxxxxxxxxx
 MIDTRANS_SERVER_KEY=SB-Mid-server-xxxxxxxxxxxxxxxxxxx
@@ -111,82 +120,82 @@ MIDTRANS_IS_PRODUCTION=false
 MIDTRANS_IS_SANITIZED=true
 MIDTRANS_IS_3DS=true
 
-# URL ngrok akan diisi setelah menjalankan ngrok (lihat poin 9)
+# URL Notifikasi ngrok (Diperbarui setelah ngrok dijalankan pada Poin 9)
 MIDTRANS_NOTIFICATION_URL=https://xxxxxxxx.ngrok-free.app/api/payment/notification
+
 ```
 
-> ⚠️ **Catatan:** `MIDTRANS_NOTIFICATION_URL` wajib memakai URL ngrok (bukan `localhost`) karena Midtrans perlu mengirim notifikasi status pembayaran ke server melalui internet publik.
+> ⚠️ **Catatan Penting:** Variable `MIDTRANS_NOTIFICATION_URL` wajib menggunakan URL publik (seperti URL dari ngrok), karena Midtrans membutuhkan akses publik untuk mengirimkan notifikasi *webhook* status transaksi.
 
 ---
 
-## 4. Setup Database MySQL
+## 4. Inisialisasi Database MySQL
 
-Buat database secara manual via terminal MySQL atau tools seperti phpMyAdmin/TablePlus:
+Buat basis data baru bernama `cloth_store_db` melalui perintah SQL atau perkakas manajemen database pilihan Anda (seperti phpMyAdmin, TablePlus, atau DBeaver):
 
 ```sql
 CREATE DATABASE cloth_store_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 ```
 
-Atau via terminal langsung:
+Atau langsung dari terminal:
 
 ```bash
 mysql -u root -p -e "CREATE DATABASE cloth_store_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
 ```
 
 ---
 
-## 5. Struktur Database & Migration
+## 5. Skema Database & Migrasi
 
-Berikut daftar tabel yang dibutuhkan beserta relasinya (disusun berdasarkan kebutuhan e-commerce pakaian).
+### 5.1 Daftar Tabel Sistem
 
-### 5.1 Daftar Tabel
+| No | Tabel | Deskripsi |
+| --- | --- | --- |
+| 1 | `users` | Menyimpan data pengguna, termasuk `google_id` |
+| 2 | `addresses` | Menyimpan alamat pengiriman milik pengguna |
+| 3 | `categories` | Kategori produk (*self-referencing* untuk sub-kategori) |
+| 4 | `products` | Data utama produk |
+| 5 | `product_variants` | Varian spesifik produk (ukuran, warna, stok) |
+| 6 | `product_images` | Berkas gambar pendukung produk |
+| 7 | `carts` | Keranjang belanja pengguna |
+| 8 | `cart_items` | Item-item di dalam keranjang belanja |
+| 9 | `orders` | Transaksi pemesanan |
+| 10 | `order_items` | Detail barang yang dipesan |
+| 11 | `payments` | Catatan transaksi pembayaran (Midtrans) |
+| 12 | `shipments` | Data dan status pengiriman barang |
+| 13 | `reviews` | Ulasan produk dari pengguna |
+| 14 | `wishlists` | Daftar produk favorit pengguna |
+| 15 | `coupons` | Data kupon atau kode promo |
 
-| No | Tabel | Keterangan |
-|----|-------|------------|
-| 1  | `users` | Data user, termasuk `google_id` untuk OAuth |
-| 2  | `addresses` | Alamat pengiriman milik user |
-| 3  | `categories` | Kategori produk (self-relation untuk sub-kategori) |
-| 4  | `products` | Data produk |
-| 5  | `product_variants` | Varian produk (ukuran, warna, stok) |
-| 6  | `product_images` | Gambar produk |
-| 7  | `carts` | Keranjang belanja user |
-| 8  | `cart_items` | Item dalam keranjang |
-| 9  | `orders` | Data pesanan |
-| 10 | `order_items` | Item dalam pesanan |
-| 11 | `payments` | Data pembayaran (terhubung Midtrans) |
-| 12 | `shipments` | Data pengiriman |
-| 13 | `reviews` | Ulasan produk |
-| 14 | `wishlists` | Produk favorit user |
-| 15 | `coupons` | Kupon diskon |
+### 5.2 Hubungan Antar Tabel (Relasi)
 
-### 5.2 Relasi Antar Tabel
+| Relasi | Tipe Hubungan |
+| --- | --- |
+| `users` → `addresses` | One to Many ($1 : N$) |
+| `users` → `orders` | One to Many ($1 : N$) |
+| `users` → `carts` | One to One ($1 : 1$) |
+| `users` → `reviews` | One to Many ($1 : N$) |
+| `users` → `wishlists` | One to Many ($1 : N$) |
+| `categories` → `categories` | One to Many ($1 : N$, *Parent-Child*) |
+| `categories` → `products` | One to Many ($1 : N$) |
+| `products` → `product_variants` | One to Many ($1 : N$) |
+| `products` → `product_images` | One to Many ($1 : N$) |
+| `products` → `reviews` | One to Many ($1 : N$) |
+| `carts` → `cart_items` | One to Many ($1 : N$) |
+| `product_variants` → `cart_items` | One to Many ($1 : N$) |
+| `orders` → `order_items` | One to Many ($1 : N$) |
+| `product_variants` → `order_items` | One to Many ($1 : N$) |
+| `orders` → `payments` | One to One ($1 : 1$) |
+| `orders` → `shipments` | One to One ($1 : 1$) |
+| `orders` → `coupons` | Many to One ($N : 1$, *Opsional*) |
 
-| Relasi | Tipe |
-|---|---|
-| users → addresses | 1 - N |
-| users → orders | 1 - N |
-| users → carts | 1 - 1 |
-| users → reviews | 1 - N |
-| users → wishlists | 1 - N |
-| categories → categories (self) | 1 - N (parent-child) |
-| categories → products | 1 - N |
-| products → product_variants | 1 - N |
-| products → product_images | 1 - N |
-| products → reviews | 1 - N |
-| carts → cart_items | 1 - N |
-| product_variants → cart_items | 1 - N |
-| orders → order_items | 1 - N |
-| product_variants → order_items | 1 - N |
-| orders → payments | 1 - 1 (atau 1-N jika ada retry) |
-| orders → shipments | 1 - 1 |
-| orders → coupons | N - 1 (opsional) |
+### 5.3 Membuat Berkas Migrasi
 
-### 5.3 Membuat Migration
-
-Jalankan perintah berikut satu per satu (urutan penting karena foreign key):
+Jalankan perintah pembuatan migrasi berikut secara berurutan untuk menjaga dependensi *foreign key*:
 
 ```bash
-php artisan make:migration create_users_table_custom
 php artisan make:migration create_addresses_table
 php artisan make:migration create_categories_table
 php artisan make:migration create_products_table
@@ -201,13 +210,14 @@ php artisan make:migration create_payments_table
 php artisan make:migration create_shipments_table
 php artisan make:migration create_reviews_table
 php artisan make:migration create_wishlists_table
+
 ```
 
-> 📌 Catatan: migration bawaan Laravel `create_users_table` sudah ada. Modifikasi langsung file migration `users` bawaan untuk menambahkan kolom `google_id`, `avatar`, `phone`, `role`, dan membuat `password` nullable (karena user Google Auth tidak punya password).
+> 📌 **Catatan:** Jangan buat migrasi tabel `users` baru, melainkan perbarui berkas migrasi bawaan Laravel `database/migrations/xxxx_xx_xx_xxxxxx_create_users_table.php`.
 
-### 5.4 Isi Migration Utama
+### 5.4 Kode Sumber Berkas Migrasi
 
-**`database/migrations/xxxx_xx_xx_000000_create_users_table.php`** (edit migration bawaan):
+**1. `database/migrations/xxxx_xx_xx_000000_create_users_table.php**`
 
 ```php
 Schema::create('users', function (Blueprint $table) {
@@ -217,21 +227,22 @@ Schema::create('users', function (Blueprint $table) {
     $table->string('google_id')->nullable()->unique();
     $table->string('avatar')->nullable();
     $table->timestamp('email_verified_at')->nullable();
-    $table->string('password')->nullable(); // nullable karena login via Google
+    $table->string('password')->nullable(); // Nullable karena Login menggunakan Google OAuth
     $table->string('phone')->nullable();
     $table->enum('role', ['customer', 'admin'])->default('customer');
     $table->rememberToken();
     $table->timestamps();
 });
+
 ```
 
-**`create_addresses_table`:**
+**2. `create_addresses_table**`
 
 ```php
 Schema::create('addresses', function (Blueprint $table) {
     $table->id();
     $table->foreignId('user_id')->constrained()->onDelete('cascade');
-    $table->string('label')->nullable(); // rumah, kantor, dll
+    $table->string('label')->nullable(); // Contoh: Rumah, Kantor
     $table->string('recipient_name');
     $table->string('phone');
     $table->text('address');
@@ -241,9 +252,10 @@ Schema::create('addresses', function (Blueprint $table) {
     $table->boolean('is_default')->default(false);
     $table->timestamps();
 });
+
 ```
 
-**`create_categories_table`:**
+**3. `create_categories_table**`
 
 ```php
 Schema::create('categories', function (Blueprint $table) {
@@ -253,9 +265,10 @@ Schema::create('categories', function (Blueprint $table) {
     $table->foreignId('parent_id')->nullable()->constrained('categories')->onDelete('cascade');
     $table->timestamps();
 });
+
 ```
 
-**`create_products_table`:**
+**4. `create_products_table**`
 
 ```php
 Schema::create('products', function (Blueprint $table) {
@@ -270,9 +283,10 @@ Schema::create('products', function (Blueprint $table) {
     $table->boolean('is_active')->default(true);
     $table->timestamps();
 });
+
 ```
 
-**`create_product_variants_table`:**
+**5. `create_product_variants_table**`
 
 ```php
 Schema::create('product_variants', function (Blueprint $table) {
@@ -285,9 +299,10 @@ Schema::create('product_variants', function (Blueprint $table) {
     $table->integer('stock_quantity')->default(0);
     $table->timestamps();
 });
+
 ```
 
-**`create_product_images_table`:**
+**6. `create_product_images_table**`
 
 ```php
 Schema::create('product_images', function (Blueprint $table) {
@@ -298,9 +313,10 @@ Schema::create('product_images', function (Blueprint $table) {
     $table->integer('sort_order')->default(0);
     $table->timestamps();
 });
+
 ```
 
-**`create_carts_table`:**
+**7. `create_carts_table**`
 
 ```php
 Schema::create('carts', function (Blueprint $table) {
@@ -308,9 +324,10 @@ Schema::create('carts', function (Blueprint $table) {
     $table->foreignId('user_id')->constrained()->onDelete('cascade');
     $table->timestamps();
 });
+
 ```
 
-**`create_cart_items_table`:**
+**8. `create_cart_items_table**`
 
 ```php
 Schema::create('cart_items', function (Blueprint $table) {
@@ -320,9 +337,10 @@ Schema::create('cart_items', function (Blueprint $table) {
     $table->integer('quantity')->default(1);
     $table->timestamps();
 });
+
 ```
 
-**`create_coupons_table`:**
+**9. `create_coupons_table**`
 
 ```php
 Schema::create('coupons', function (Blueprint $table) {
@@ -334,9 +352,10 @@ Schema::create('coupons', function (Blueprint $table) {
     $table->timestamp('expired_at')->nullable();
     $table->timestamps();
 });
+
 ```
 
-**`create_orders_table`:**
+**10. `create_orders_table**`
 
 ```php
 Schema::create('orders', function (Blueprint $table) {
@@ -349,9 +368,10 @@ Schema::create('orders', function (Blueprint $table) {
     $table->decimal('total_amount', 12, 2);
     $table->timestamps();
 });
+
 ```
 
-**`create_order_items_table`:**
+**11. `create_order_items_table**`
 
 ```php
 Schema::create('order_items', function (Blueprint $table) {
@@ -359,28 +379,30 @@ Schema::create('order_items', function (Blueprint $table) {
     $table->foreignId('order_id')->constrained()->onDelete('cascade');
     $table->foreignId('product_variant_id')->constrained()->onDelete('restrict');
     $table->integer('quantity');
-    $table->decimal('price_at_purchase', 12, 2); // snapshot harga saat transaksi
+    $table->decimal('price_at_purchase', 12, 2); // Menyimpan histori harga saat barang dibeli
     $table->timestamps();
 });
+
 ```
 
-**`create_payments_table`:**
+**12. `create_payments_table**`
 
 ```php
 Schema::create('payments', function (Blueprint $table) {
     $table->id();
     $table->foreignId('order_id')->constrained()->onDelete('cascade');
-    $table->string('payment_method')->nullable(); // gopay, bank_transfer, credit_card, dll (dari Midtrans)
+    $table->string('payment_method')->nullable(); // gopay, bank_transfer, credit_card, dll.
     $table->decimal('amount', 12, 2);
     $table->enum('status', ['pending', 'settlement', 'expire', 'cancel', 'deny', 'refund'])->default('pending');
-    $table->string('transaction_id')->nullable(); // dari Midtrans
-    $table->string('snap_token')->nullable(); // token Snap Midtrans
+    $table->string('transaction_id')->nullable(); // ID Transaksi resmi dari Midtrans
+    $table->string('snap_token')->nullable(); // Token Snap dari Midtrans
     $table->timestamp('paid_at')->nullable();
     $table->timestamps();
 });
+
 ```
 
-**`create_shipments_table`:**
+**13. `create_shipments_table**`
 
 ```php
 Schema::create('shipments', function (Blueprint $table) {
@@ -392,22 +414,24 @@ Schema::create('shipments', function (Blueprint $table) {
     $table->timestamp('shipped_at')->nullable();
     $table->timestamps();
 });
+
 ```
 
-**`create_reviews_table`:**
+**14. `create_reviews_table**`
 
 ```php
 Schema::create('reviews', function (Blueprint $table) {
     $table->id();
     $table->foreignId('product_id')->constrained()->onDelete('cascade');
     $table->foreignId('user_id')->constrained()->onDelete('cascade');
-    $table->tinyInteger('rating'); // 1-5
+    $table->tinyInteger('rating'); // Skala 1 - 5
     $table->text('comment')->nullable();
     $table->timestamps();
 });
+
 ```
 
-**`create_wishlists_table`:**
+**15. `create_wishlists_table**`
 
 ```php
 Schema::create('wishlists', function (Blueprint $table) {
@@ -415,43 +439,50 @@ Schema::create('wishlists', function (Blueprint $table) {
     $table->foreignId('user_id')->constrained()->onDelete('cascade');
     $table->foreignId('product_id')->constrained()->onDelete('cascade');
     $table->timestamps();
-    $table->unique(['user_id', 'product_id']); // biar tidak duplikat
+    $table->unique(['user_id', 'product_id']); // Mencegah data duplikat
 });
+
 ```
 
-### 5.5 Jalankan Migration
+### 5.5 Eksekusi Migrasi
+
+Jalankan skrip migrasi ke database:
 
 ```bash
 php artisan migrate
+
 ```
 
-Jika ingin reset total (hati-hati, akan menghapus semua data):
+*Jika ingin mengulang skema dari awal (perhatian: tindakan ini akan menghapus seluruh data yang ada):*
 
 ```bash
 php artisan migrate:fresh
+
 ```
 
 ---
 
-## 6. Setup Google OAuth (Login & Register)
+## 6. Konfigurasi Google OAuth
 
-### 6.1 Buat Kredensial di Google Cloud Console
+### 6.1 Membuat Kredensial di Google Cloud Console
 
-1. Buka [Google Cloud Console](https://console.cloud.google.com/)
-2. Buat project baru (atau pilih project yang sudah ada)
-3. Masuk ke **APIs & Services → OAuth consent screen**, isi data aplikasi (nama, email support, dll), pilih **External** jika untuk publik
-4. Masuk ke **APIs & Services → Credentials → Create Credentials → OAuth Client ID**
-5. Pilih **Application type: Web application**
-6. Isi **Authorized redirect URIs**:
-   ```
-   http://localhost:8000/api/auth/google/callback
-   ```
-7. Klik **Create**, salin **Client ID** dan **Client Secret**
-8. Masukkan ke `.env` sesuai poin 3 di atas
+1. Akses portal [Google Cloud Console](https://console.cloud.google.com/).
+2. Buat proyek baru atau pilih proyek yang sudah tersedia.
+3. Buka menu **APIs & Services → OAuth consent screen**, lengkapi informasi aplikasi, lalu pilih jenis **External**.
+4. Navigasi ke **APIs & Services → Credentials → Create Credentials → OAuth Client ID**.
+5. Pilih jenis aplikasi: **Web application**.
+6. Tambahkan URI pada bagian **Authorized redirect URIs**:
+```text
+http://localhost:8000/api/auth/google/callback
 
-### 6.2 Konfigurasi `config/services.php`
+```
 
-Tambahkan konfigurasi Google:
+
+7. Klik **Create**, simpan nilai **Client ID** dan **Client Secret** ke dalam berkas `.env` aplikasi Anda.
+
+### 6.2 Mengonfigurasi `config/services.php`
+
+Tambahkan array konfigurasi `google` berikut pada berkas `config/services.php`:
 
 ```php
 'google' => [
@@ -459,15 +490,19 @@ Tambahkan konfigurasi Google:
     'client_secret' => env('GOOGLE_CLIENT_SECRET'),
     'redirect' => env('GOOGLE_REDIRECT_URI'),
 ],
+
 ```
 
-### 6.3 Buat Controller Auth
+### 6.3 Membuat Controller Autentikasi
+
+Jalankan perintah berikut untuk membuat *controller* penanganan OAuth:
 
 ```bash
 php artisan make:controller Api/Auth/GoogleAuthController
+
 ```
 
-**`app/Http/Controllers/Api/Auth/GoogleAuthController.php`:**
+Isi berkas `app/Http/Controllers/Api/Auth/GoogleAuthController.php`:
 
 ```php
 <?php
@@ -482,7 +517,9 @@ use Laravel\Socialite\Facades\Socialite;
 
 class GoogleAuthController extends Controller
 {
-    // Redirect ke halaman login Google
+    /**
+     * Mengarahkan pengguna ke halaman autentikasi Google.
+     */
     public function redirect()
     {
         return Socialite::driver('google')
@@ -490,39 +527,41 @@ class GoogleAuthController extends Controller
             ->redirect();
     }
 
-    // Callback setelah user login/register via Google
+    /**
+     * Memproses callback data dari Google OAuth.
+     */
     public function callback()
     {
         $googleUser = Socialite::driver('google')->stateless()->user();
 
-        // Cek apakah user sudah pernah daftar (login) atau belum (register otomatis)
+        // Cari pengguna berdasarkan google_id atau alamat email
         $user = User::where('google_id', $googleUser->getId())
             ->orWhere('email', $googleUser->getEmail())
             ->first();
 
         if (!$user) {
-            // REGISTER otomatis untuk user baru
+            // Registrasi otomatis untuk pengguna baru
             $user = User::create([
                 'name' => $googleUser->getName(),
                 'email' => $googleUser->getEmail(),
                 'google_id' => $googleUser->getId(),
                 'avatar' => $googleUser->getAvatar(),
-                'password' => bcrypt(Str::random(24)), // password random, tidak dipakai
+                'password' => bcrypt(Str::random(24)), // Password acak
                 'role' => 'customer',
                 'email_verified_at' => now(),
             ]);
 
-            // Buat cart kosong otomatis untuk user baru
+            // Buat keranjang belanja kosong untuk pengguna baru
             Cart::create(['user_id' => $user->id]);
         } else if (!$user->google_id) {
-            // Kalau email sudah ada tapi belum terhubung Google, hubungkan
+            // Tautkan google_id jika akun email sudah ada sebelumnya
             $user->update([
                 'google_id' => $googleUser->getId(),
                 'avatar' => $googleUser->getAvatar(),
             ]);
         }
 
-        // Generate token Sanctum untuk autentikasi API selanjutnya
+        // Buat token akses API Sanctum
         $token = $user->createToken('auth_token')->plainTextToken;
 
         return response()->json([
@@ -532,75 +571,86 @@ class GoogleAuthController extends Controller
         ]);
     }
 }
+
 ```
 
-### 6.4 Tambahkan Route
+### 6.4 Menambahkan Rute API
 
-**`routes/api.php`:**
+Buka berkas `routes/api.php` dan tambahkan rute berikut:
 
 ```php
 use App\Http\Controllers\Api\Auth\GoogleAuthController;
 
-// ==========================
-// AUTH — GOOGLE OAUTH
-// ==========================
+// ==========================================
+// AUTENTIKASI — GOOGLE OAUTH
+// ==========================================
 Route::get('/auth/google/redirect', [GoogleAuthController::class, 'redirect']);
 Route::get('/auth/google/callback', [GoogleAuthController::class, 'callback']);
 
-// Route yang butuh login (contoh)
+// Rute terproteksi Sanctum
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Illuminate\Http\Request $request) {
         return $request->user();
     });
+
     Route::post('/logout', function (Illuminate\Http\Request $request) {
         $request->user()->currentAccessToken()->delete();
         return response()->json(['message' => 'Logout berhasil']);
     });
 });
+
 ```
 
 ---
 
 ## 7. Alur Autentikasi Google
 
-```
-User klik "Login with Google" (dari frontend)
-        ↓
-Frontend redirect ke: GET /api/auth/google/redirect
-        ↓
-Laravel redirect ke halaman consent Google
-        ↓
-User pilih akun & izinkan akses
-        ↓
-Google redirect balik ke: GET /api/auth/google/callback
-        ↓
-Laravel cek: user baru? → REGISTER otomatis
-             user lama? → LOGIN, ambil data
-        ↓
-Laravel generate Sanctum Token
-        ↓
-Return JSON { user, token } ke frontend
-        ↓
-Frontend simpan token, dipakai untuk request selanjutnya
-(Header: Authorization: Bearer <token>)
-```
+```text
+Pengguna menekan tombol "Login with Google" pada Frontend
+        │
+        ▼
+Frontend mengarahkan ke: GET /api/auth/google/redirect
+        │
+        ▼
+Laravel mengarahkan pengguna ke halaman persetujuan Google
+        │
+        ▼
+Pengguna memilih akun Google dan memberikan izin akses
+        │
+        ▼
+Google mengarahkan balik ke: GET /api/auth/google/callback
+        │
+        ▼
+Laravel mengecek status pengguna:
+  ├─ Pengguna Baru  ➜ Registrasi akun otomatis & buat keranjang belanja
+  └─ Pengguna Lama ➜ Login & perbarui data profil
+        │
+        ▼
+Laravel menerbitkan Personal Access Token (Sanctum)
+        │
+        ▼
+API mengembalikan respons JSON berisi data { user, token } ke Frontend
+        │
+        ▼
+Frontend menyimpan token untuk autentikasi API selanjutnya
+(Menggunakan Header: Authorization: Bearer <token>)
 
-> ✅ Dengan pola ini, **satu alur Google OAuth otomatis menangani Login dan Register** — tidak perlu form register/login manual terpisah.
+```
 
 ---
 
-## 8. Setup Midtrans (Payment)
+## 8. Konfigurasi Midtrans Payment Gateway
 
-### 8.1 Daftar Akun Sandbox
+### 8.1 Pendaftaran Akun Sandbox Midtrans
 
-1. Daftar di [https://dashboard.sandbox.midtrans.com/register](https://dashboard.sandbox.midtrans.com/register)
-2. Setelah login, masuk ke **Settings → Access Keys**
-3. Salin **Merchant ID**, **Client Key**, dan **Server Key**
-4. Masukkan ke `.env` sesuai poin 3
+1. Daftar akun pada [Midtrans Sandbox Dashboard](https://dashboard.sandbox.midtrans.com/register).
+2. Setelah masuk, buka menu **Settings → Access Keys**.
+3. Salin informasi **Merchant ID**, **Client Key**, dan **Server Key**.
+4. Masukkan seluruh kunci kredensial ke berkas `.env`.
 
-### 8.2 Konfigurasi Config Midtrans
+### 8.2 Membuat Berkas Konfigurasi Midtrans
 
-Buat file `config/midtrans.php`:
+Buat berkas baru `config/midtrans.php`:
 
 ```php
 <?php
@@ -613,15 +663,19 @@ return [
     'is_sanitized' => env('MIDTRANS_IS_SANITIZED', true),
     'is_3ds' => env('MIDTRANS_IS_3DS', true),
 ];
+
 ```
 
-### 8.3 Buat Service Midtrans
+### 8.3 Membuat Layanan Service Midtrans
+
+Buat direktori dan berkas `app/Services/MidtransService.php`:
 
 ```bash
 mkdir -p app/Services
+
 ```
 
-**`app/Services/MidtransService.php`:**
+Isi berkas `app/Services/MidtransService.php`:
 
 ```php
 <?php
@@ -642,7 +696,9 @@ class MidtransService
         Config::$is3ds = config('midtrans.is_3ds');
     }
 
-    // Membuat transaksi & mendapatkan Snap Token
+    /**
+     * Membuat transaksi dan memperoleh Snap Token.
+     */
     public function createTransaction($order)
     {
         $params = [
@@ -668,21 +724,27 @@ class MidtransService
         return Snap::getSnapToken($params);
     }
 
-    // Menangkap notifikasi dari webhook Midtrans
+    /**
+     * Memproses objek notifikasi dari Webhook Midtrans.
+     */
     public function handleNotification()
     {
         return new Notification();
     }
 }
+
 ```
 
-### 8.4 Buat Controller Payment
+### 8.4 Membuat Controller Pembayaran
+
+Jalankan perintah berikut:
 
 ```bash
 php artisan make:controller Api/PaymentController
+
 ```
 
-**`app/Http/Controllers/Api/PaymentController.php`:**
+Isi berkas `app/Http/Controllers/Api/PaymentController.php`:
 
 ```php
 <?php
@@ -704,7 +766,9 @@ class PaymentController extends Controller
         $this->midtransService = $midtransService;
     }
 
-    // Buat Snap Token untuk order tertentu
+    /**
+     * Membuat Snap Token untuk pesanan tertentu.
+     */
     public function createSnapToken(Request $request, $orderId)
     {
         $order = Order::with(['user', 'address', 'orderItems.productVariant.product'])
@@ -712,7 +776,6 @@ class PaymentController extends Controller
 
         $snapToken = $this->midtransService->createTransaction($order);
 
-        // Simpan/update record payment dengan snap_token
         Payment::updateOrCreate(
             ['order_id' => $order->id],
             [
@@ -728,7 +791,9 @@ class PaymentController extends Controller
         ]);
     }
 
-    // Endpoint webhook — dipanggil Midtrans via ngrok URL
+    /**
+     * Endpoint Webhook yang dipanggil otomatis oleh Midtrans.
+     */
     public function notification(Request $request)
     {
         $notif = $this->midtransService->handleNotification();
@@ -761,18 +826,20 @@ class PaymentController extends Controller
 
         $payment->payment_method = $paymentType;
         $payment->transaction_id = $transactionId;
-        $payment->paid_at = $payment->status == 'settlement' ? now() : null;
+        $payment->paid_at = ($payment->status == 'settlement') ? now() : null;
+
         $payment->save();
         $order->save();
 
         return response()->json(['message' => 'Notifikasi berhasil diproses']);
     }
 }
+
 ```
 
-### 8.5 Tambahkan Route Payment
+### 8.5 Menambahkan Rute Pembayaran
 
-**`routes/api.php`:**
+Buka berkas `routes/api.php` dan tambahkan rute berikut:
 
 ```php
 use App\Http\Controllers\Api\PaymentController;
@@ -781,123 +848,140 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/orders/{orderId}/pay', [PaymentController::class, 'createSnapToken']);
 });
 
-// Route notifikasi TIDAK pakai middleware auth (Midtrans yang akses langsung dari server mereka)
+// Rute Webhook (Bebas dari proteksi autentikasi user)
 Route::post('/payment/notification', [PaymentController::class, 'notification']);
-```
 
-> ⚠️ Route `payment/notification` harus dikecualikan dari **CSRF/Sanctum middleware** karena diakses langsung oleh server Midtrans, bukan dari browser user. Karena ini di bawah `routes/api.php`, secara default sudah aman dari CSRF (Laravel API route tidak pakai CSRF).
+```
 
 ---
 
-## 9. Setup ngrok untuk Webhook Midtrans
+## 9. Konfigurasi ngrok untuk Webhook Midtrans
 
-Midtrans butuh URL publik untuk mengirim notifikasi pembayaran ke server lokal kita. Di sinilah ngrok berperan.
+ngrok digunakan untuk meneruskan Notifikasi Pembayaran (*webhook*) dari *server* publik Midtrans ke *environment* lokal Anda.
 
-### 9.1 Install ngrok
+### 9.1 Instalasi dan Autentikasi ngrok
 
-Download dari [https://ngrok.com/download](https://ngrok.com/download), lalu login/daftar akun dan authenticate:
+Unduh aplikasi dari [ngrok Download](https://ngrok.com/download), lalu daftarkan authtoken akun Anda:
 
 ```bash
 ngrok config add-authtoken <TOKEN_DARI_DASHBOARD_NGROK>
+
 ```
 
-### 9.2 Jalankan Laravel
+### 9.2 Menjalankan Laravel Server
 
 ```bash
 php artisan serve
+
 ```
 
-Laravel akan berjalan di `http://localhost:8000`.
+Aplikasi secara standar akan berjalan di `http://localhost:8000`.
 
-### 9.3 Jalankan ngrok
+### 9.3 Menjalankan ngrok Tunnel
 
-Di terminal terpisah:
+Buka jendela terminal baru, lalu jalankan:
 
 ```bash
 ngrok http 8000
-```
-
-Akan muncul output seperti:
 
 ```
+
+Terminal akan menampilkan URL publik seperti contoh berikut:
+
+```text
 Forwarding    https://a1b2c3d4e5f6.ngrok-free.app -> http://localhost:8000
+
 ```
 
-Salin URL `https://a1b2c3d4e5f6.ngrok-free.app` tersebut.
+### 9.4 Mengonfigurasi Notification URL di Midtrans
 
-### 9.4 Daftarkan URL ke Midtrans Dashboard
+1. Masuk ke [Dashboard Sandbox Midtrans](https://dashboard.sandbox.midtrans.com/).
+2. Pilih menu **Settings → Configuration**.
+3. Pada kolom **Payment Notification URL**, isi dengan URL ngrok Anda:
+```text
+https://a1b2c3d4e5f6.ngrok-free.app/api/payment/notification
 
-1. Buka [Midtrans Dashboard Sandbox](https://dashboard.sandbox.midtrans.com/)
-2. Masuk ke **Settings → Configuration**
-3. Isi **Payment Notification URL** dengan:
-   ```
-   https://a1b2c3d4e5f6.ngrok-free.app/api/payment/notification
-   ```
-4. Simpan
+```
 
-### 9.5 Update `.env`
+
+4. Simpan perubahan.
+
+### 9.5 Memperbarui Berkas `.env`
 
 ```env
 MIDTRANS_NOTIFICATION_URL=https://a1b2c3d4e5f6.ngrok-free.app/api/payment/notification
+
 ```
 
-> ⚠️ **Penting:** URL ngrok versi gratis akan **berubah setiap kali restart ngrok**. Jangan lupa update kembali di Midtrans Dashboard & `.env` setiap kali menjalankan ulang ngrok saat development.
+> ⚠️ **Catatan Tambahan:** URL pada ngrok versi gratis akan berubah setiap kali sesi dijalankan ulang. Pastikan untuk selalu memperbarui URL di Dashboard Midtrans dan berkas `.env` saat memulai sesi pengembangan baru.
 
 ---
 
-## 10. Alur Payment (Checkout → Payment → Webhook)
+## 10. Alur Transaksi & Pembayaran
 
-```
-User checkout dari cart → sistem buat record "orders" (status: pending)
-        ↓
-Frontend request: POST /api/orders/{orderId}/pay
-        ↓
-Backend generate Snap Token via Midtrans API
-        ↓
-Backend simpan record "payments" (status: pending, snap_token: xxx)
-        ↓
-Frontend tampilkan Snap popup Midtrans (pakai snap_token & client_key)
-        ↓
-User bayar (transfer bank, e-wallet, kartu kredit, dll)
-        ↓
-Midtrans kirim notifikasi ke webhook: POST https://xxx.ngrok-free.app/api/payment/notification
-        ↓
-Backend proses notifikasi:
-   - update "payments".status → settlement/expire/cancel
-   - update "orders".status → paid/cancelled
-        ↓
-Frontend bisa polling atau cek status order untuk update tampilan
+```text
+Pengguna melakukan checkout dari keranjang belanja ➜ Sistem membuat data "orders" (Status: pending)
+        │
+        ▼
+Frontend mengirimkan permintaan: POST /api/orders/{orderId}/pay
+        │
+        ▼
+Backend meminta Snap Token ke API Midtrans
+        │
+        ▼
+Backend menyimpan catatan "payments" (Status: pending, snap_token: xxx)
+        │
+        ▼
+Frontend menampilkan antarmuka popup Midtrans Snap (Menggunakan snap_token & client_key)
+        │
+        ▼
+Pengguna menyelesaikan pembayaran (Transfer Bank, E-Wallet, Kartu Kredit, dll.)
+        │
+        ▼
+Midtrans mengirimkan Notifikasi HTTP ke Webhook: POST https://xxx.ngrok-free.app/api/payment/notification
+        │
+        ▼
+Backend memproses notifikasi:
+  ├─ Memperbarui "payments".status ➜ settlement / expire / cancel
+  └─ Memperbarui "orders".status   ➜ paid / cancelled
+        │
+        ▼
+Frontend melakukan pengecekan ulang status pesanan untuk memperbarui tampilan pengguna
+
 ```
 
 ---
 
-## 11. Menjalankan Project
+## 11. Petunjuk Menjalankan Aplikasi
 
-Jalankan 2 terminal terpisah untuk development:
+Buka dua jendela terminal untuk kebutuhan pengembangan:
 
-**Terminal 1 — Laravel server:**
+**Terminal 1 — Server Laravel:**
 
 ```bash
 php artisan serve
+
 ```
 
-**Terminal 2 — ngrok (khusus saat testing payment):**
+**Terminal 2 — ngrok (Dibutuhkan saat pengujian pembayaran):**
 
 ```bash
 ngrok http 8000
+
 ```
 
-Pastikan juga sudah menjalankan:
+Pastikan migrasi database telah dilakukan:
 
 ```bash
 php artisan migrate
+
 ```
 
 ---
 
-## 12. Struktur Folder Penting
+## 12. Struktur Direktori Penting
 
-```
+```text
 app/
 ├── Http/
 │   └── Controllers/
@@ -925,62 +1009,70 @@ app/
     └── MidtransService.php
 
 config/
-├── services.php     (kredensial Google)
-└── midtrans.php     (kredensial Midtrans)
+├── services.php     (Kredensial OAuth Google)
+└── midtrans.php     (Kredensial Midtrans)
 
 database/
 └── migrations/
-    └── (15 file migration tabel di atas)
+    └── (15 berkas migrasi tabel)
 
 routes/
 └── api.php
+
 ```
 
 ---
 
-## 13. Testing API (Ringkas)
+## 13. Panduan Pengujian API
 
-**Login/Register via Google** (buka langsung di browser, bukan Postman, karena melibatkan redirect):
+**1. Login / Registrasi via Google OAuth:**
+Buka tautan berikut langsung pada *browser* (karena membutuhkan alur pengalihan halaman):
 
-```
+```text
 http://localhost:8000/api/auth/google/redirect
-```
-
-**Cek user login** (pakai Postman/Insomnia, isi header `Authorization: Bearer <token>`):
 
 ```
+
+**2. Memeriksa Data Pengguna Terautentikasi:**
+Gunakan aplikasi penguji API seperti Postman atau Insomnia. Tambahkan *header*: `Authorization: Bearer <token>`
+
+```text
 GET http://localhost:8000/api/user
-```
-
-**Buat Snap Token pembayaran:**
 
 ```
+
+**3. Membuat Snap Token Pembayaran:**
+
+```text
 POST http://localhost:8000/api/orders/1/pay
 Authorization: Bearer <token>
-```
-
-**Simulasi webhook Midtrans** (biasanya otomatis terpanggil setelah pembayaran sandbox berhasil, tapi bisa juga dites manual dari Postman ke URL ngrok):
 
 ```
+
+**4. Pengujian Simulasi Webhook Midtrans:**
+Dipanggil secara otomatis oleh *server* Midtrans setelah transaksi pembayaran pada lingkungan *sandbox* selesai dilakukan. Dapat juga diuji secara manual melalui Postman ke URL ngrok:
+
+```text
 POST https://xxxx.ngrok-free.app/api/payment/notification
+
 ```
 
 ---
 
-## 14. Troubleshooting
+## 14. Penanganan Masalah (Troubleshooting)
 
-| Masalah | Solusi |
-|---|---|
-| `SQLSTATE[HY000] [1045] Access denied` | Cek ulang `DB_USERNAME` & `DB_PASSWORD` di `.env` |
-| Redirect Google error `redirect_uri_mismatch` | Pastikan URL di Google Console **persis sama** dengan `GOOGLE_REDIRECT_URI` di `.env` |
-| Webhook Midtrans tidak masuk ke Laravel | Pastikan ngrok masih berjalan & URL di Midtrans Dashboard sudah yang terbaru (URL ngrok berubah tiap restart) |
-| `Class "Midtrans\Config" not found` | Jalankan ulang `composer require midtrans/midtrans-php` lalu `composer dump-autoload` |
-| Token Sanctum tidak terbaca di request | Pastikan header `Authorization: Bearer <token>` terkirim, dan route berada di dalam middleware `auth:sanctum` |
-| CORS error dari frontend | Install & konfigurasi `fruitcake/laravel-cors` atau sesuaikan `config/cors.php` bawaan Laravel 11 |
+| Masalah | Penyebab | Solusi |
+| --- | --- | --- |
+| `SQLSTATE[HY000] [1045] Access denied` | Kredensial MySQL tidak sesuai. | Periksa kembali nilai `DB_USERNAME` dan `DB_PASSWORD` pada berkas `.env`. |
+| Error Google Redirect `redirect_uri_mismatch` | URI pengalihan tidak cocok. | Pastikan URL yang terdaftar di Google Cloud Console **persis sama** dengan nilai `GOOGLE_REDIRECT_URI` di `.env`. |
+| Webhook Midtrans tidak terikat ke Laravel | ngrok mati atau URL tidak diperbarui. | Pastikan sesi ngrok aktif dan URL *Configuration* pada Dashboard Midtrans telah disesuaikan dengan URL ngrok terbaru. |
+| `Class "Midtrans\Config" not found` | Dependensi SDK belum terinstal sempurna. | Jalankan perintah `composer require midtrans/midtrans-php` diikuti dengan `composer dump-autoload`. |
+| Token Sanctum ditolak / Unauthenticated | Header permintaan kurang atau salah. | Pastikan *header* `Authorization: Bearer <token>` terikutsertakan dan rute tujuan berada di dalam grup `auth:sanctum`. |
+| Kendala CORS pada aplikasi Frontend | Akses antar-domain diblokir. | Konfigurasikan pengaturan CORS pada berkas `config/cors.php` bawaan Laravel. |
 
 ---
 
-## Ringkasan Environment Variable Lengkap
+## Ringkasan Berkas Environment Variable (`.env`)
 
 ```env
 APP_NAME="Cloth Store"
@@ -1010,4 +1102,5 @@ MIDTRANS_IS_PRODUCTION=false
 MIDTRANS_IS_SANITIZED=true
 MIDTRANS_IS_3DS=true
 MIDTRANS_NOTIFICATION_URL=
+
 ```
