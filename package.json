@@ -1,0 +1,27 @@
+{
+  "name": "frontend-toko-rpl2",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@heroicons/vue": "^2.2.0",
+    "@vueuse/motion": "^3.0.3",
+    "alpinejs": "^3.17.1",
+    "axios": "^1.20.0",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
+    "vue": "^3.5.40",
+    "vue-router": "^4.6.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@vitejs/plugin-vue": "^6.0.8",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.2.0"
+  }
+}
