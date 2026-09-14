@@ -1,138 +1,143 @@
 <template>
-  <div>
+  <div class="max-w-4xl">
     <div class="flex justify-between items-center mb-6">
       <div>
-        <h2 class="text-2xl font-bold">Manajemen Produk</h2>
-        <p class="text-gray-500 mt-1">Kelola produk toko Anda</p>
+        <h2 class="text-2xl font-bold">{{ isEdit ? 'Edit Produk' : 'Tambah Produk' }}</h2>
+        <p class="text-gray-500 mt-1">{{ isEdit ? 'Perbarui informasi produk' : 'Lengkapi informasi produk baru' }}</p>
       </div>
-      <router-link to="/admin/products/create" class="btn-primary">
-        + Tambah Produk
-      </router-link>
+      <router-link to="/admin/products" class="btn-outline">Kembali</router-link>
     </div>
 
-    <!-- Filters -->
-    <div class="flex gap-4 mb-6">
-      <input v-model="searchQuery" type="text" placeholder="Cari produk..." class="input-field max-w-xs">
-      <select v-model="filterCategory" class="input-field max-w-xs">
-        <option value="">Semua Kategori</option>
-        <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
-      </select>
-    </div>
+    <form @submit.prevent="saveProduct" class="bg-white rounded-xl shadow-sm p-6">
+      <!-- Basic Info -->
+      <div class="grid grid-cols-2 gap-4 mb-6">
+        <div class="col-span-2">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Nama Produk</label>
+          <input v-model="form.name" type="text" required class="input-field" placeholder="Masukkan nama produk">
+        </div>
 
-    <!-- Products Table -->
-    <div class="bg-white rounded-xl shadow-sm overflow-hidden">
-      <table class="w-full text-left">
-        <thead class="bg-gray-50">
-          <tr>
-            <th class="py-3 px-6 font-semibold">Produk</th>
-            <th class="py-3 px-6 font-semibold">Kategori</th>
-            <th class="py-3 px-6 font-semibold">Harga</th>
-            <th class="py-3 px-6 font-semibold">Stok</th>
-            <th class="py-3 px-6 font-semibold">Status</th>
-            <th class="py-3 px-6 font-semibold">Aksi</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="filteredProducts.length === 0" class="text-center text-gray-500 py-8">
-            <td colspan="6">Tidak ada produk ditemukan</td>
-          </tr>
-          <tr v-for="product in filteredProducts" :key="product.id" class="border-t hover:bg-gray-50">
-            <td class="py-3 px-6">
-              <div class="flex items-center space-x-3">
-                <img :src="product.images?.[0]?.image_url || 'https://via.placeholder.com/50'" class="w-12 h-12 rounded-lg object-cover" alt="Product">
-                <div>
-                  <p class="font-medium">{{ product.name }}</p>
-                  <p class="text-sm text-gray-500">{{ product.slug }}</p>
-                </div>
-              </div>
-            </td>
-            <td class="py-3 px-6">{{ product.category?.name }}</td>
-            <td class="py-3 px-6">Rp{{ formatPrice(product.base_price) }}</td>
-            <td class="py-3 px-6">
-              <span :class="product.total_stock > 0 ? 'text-green-600' : 'text-red-600'">
-                {{ product.total_stock || 0 }}
-              </span>
-            </td>
-            <td class="py-3 px-6">
-              <span class="px-2 py-1 rounded-full text-xs font-semibold" 
-                :class="product.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">
-                {{ product.is_active ? 'Aktif' : 'Nonaktif' }}
-              </span>
-            </td>
-            <td class="py-3 px-6">
-              <div class="flex space-x-2">
-                <router-link :to="`/admin/products/${product.id}/edit`" class="text-blue-600 hover:text-blue-700">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
-                  </svg>
-                </router-link>
-                <button @click="deleteProduct(product.id)" class="text-red-600 hover:text-red-700">
-                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
-                  </svg>
-                </button>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
+          <select v-model="form.category_id" required class="input-field">
+            <option value="">Pilih Kategori</option>
+            <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Harga</label>
+          <input v-model.number="form.price" type="number" min="0" required class="input-field" placeholder="0">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Stok</label>
+          <input v-model.number="form.stock" type="number" min="0" required class="input-field" placeholder="0">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">URL Gambar</label>
+          <input v-model="form.image" type="text" class="input-field" placeholder="https://...">
+        </div>
+
+        <div class="col-span-2">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
+          <textarea v-model="form.description" rows="4" class="input-field" placeholder="Deskripsi produk..."></textarea>
+        </div>
+      </div>
+
+      <!-- Image Preview -->
+      <div v-if="form.image" class="mb-6">
+        <p class="text-sm font-medium text-gray-700 mb-2">Preview Gambar</p>
+        <img :src="form.image" alt="Preview" class="w-32 h-32 object-cover rounded-lg border">
+      </div>
+
+      <p v-if="errorMessage" class="text-sm text-red-600 mb-4">{{ errorMessage }}</p>
+
+      <!-- Actions -->
+      <div class="flex justify-end gap-3 pt-4 border-t">
+        <router-link to="/admin/products" class="btn-outline">Batal</router-link>
+        <button type="submit" :disabled="isSaving" class="btn-primary disabled:opacity-50 disabled:cursor-not-allowed">
+          {{ isSaving ? 'Menyimpan...' : (isEdit ? 'Simpan Perubahan' : 'Tambah Produk') }}
+        </button>
+      </div>
+    </form>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import api from '../../services/api'
 
-const products = ref([])
+const route = useRoute()
+const router = useRouter()
+
+const isEdit = computed(() => !!route.params.id)
+
 const categories = ref([])
-const searchQuery = ref('')
-const filterCategory = ref('')
+const isSaving = ref(false)
+const errorMessage = ref('')
 
-const filteredProducts = computed(() => {
-  return products.value.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.value.toLowerCase())
-    const matchesCategory = !filterCategory.value || product.category_id === parseInt(filterCategory.value)
-    return matchesSearch && matchesCategory
-  })
+const form = ref({
+  name: '',
+  category_id: '',
+  price: 0,
+  stock: 0,
+  image: '',
+  description: '',
 })
-
-const fetchProducts = async () => {
-  try {
-    const response = await api.get('/admin/products')
-    products.value = response.data
-  } catch (error) {
-    console.error('Failed to fetch products:', error)
-  }
-}
 
 const fetchCategories = async () => {
   try {
-    const response = await api.get('/admin/categories')
-    categories.value = response.data
+    const response = await api.get('/categories')
+    categories.value = response.data.data || response.data
   } catch (error) {
     console.error('Failed to fetch categories:', error)
   }
 }
 
-const deleteProduct = async (id) => {
-  if (confirm('Apakah Anda yakin ingin menghapus produk ini?')) {
-    try {
-      await api.delete(`/admin/products/${id}`)
-      fetchProducts()
-    } catch (error) {
-      console.error('Failed to delete product:', error)
-      alert('Gagal menghapus produk')
+const fetchProduct = async () => {
+  try {
+    const response = await api.get(`/admin/products/${route.params.id}`)
+    const data = response.data.data || response.data
+
+    form.value = {
+      name: data.name || '',
+      category_id: data.category_id || '',
+      price: data.base_price ?? data.price ?? 0,
+      stock: data.stock ?? 0,
+      image: data.image || '',
+      description: data.description || '',
     }
+  } catch (error) {
+    console.error('Failed to fetch product:', error)
+    errorMessage.value = 'Gagal memuat data produk.'
   }
 }
 
-const formatPrice = (price) => {
-  return new Intl.NumberFormat('id-ID').format(price)
+const saveProduct = async () => {
+  errorMessage.value = ''
+  isSaving.value = true
+
+  try {
+    if (isEdit.value) {
+      await api.put(`/admin/products/${route.params.id}`, form.value)
+    } else {
+      await api.post('/admin/products', form.value)
+    }
+    router.push('/admin/products')
+  } catch (error) {
+    console.error('Failed to save product:', error)
+    errorMessage.value = error?.response?.data?.message || 'Gagal menyimpan produk.'
+  } finally {
+    isSaving.value = false
+  }
 }
 
 onMounted(() => {
-  fetchProducts()
   fetchCategories()
+  if (isEdit.value) {
+    fetchProduct()
+  }
 })
-</script>
+</script> 

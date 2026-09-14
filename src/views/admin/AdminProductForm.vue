@@ -15,7 +15,7 @@
           <label class="block text-sm font-medium text-gray-700 mb-1">Nama Produk</label>
           <input v-model="form.name" type="text" required class="input-field" placeholder="Masukkan nama produk">
         </div>
-        
+
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
           <select v-model="form.category_id" required class="input-field">
@@ -23,17 +23,17 @@
             <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
           </select>
         </div>
-        
+
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Brand</label>
           <input v-model="form.brand" type="text" class="input-field" placeholder="Contoh: Nike, Adidas">
         </div>
-        
+
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Harga Dasar</label>
-          <input v-model="form.base_price" type="number" required class="input-field" placeholder="0">
+          <input v-model.number="form.base_price" type="number" min="0" required class="input-field" placeholder="0">
         </div>
-        
+
         <div>
           <label class="block text-sm font-medium text-gray-700 mb-1">Gender</label>
           <select v-model="form.gender" class="input-field">
@@ -42,12 +42,12 @@
             <option value="unisex">Unisex</option>
           </select>
         </div>
-        
+
         <div class="col-span-2">
           <label class="block text-sm font-medium text-gray-700 mb-1">Deskripsi</label>
           <textarea v-model="form.description" rows="3" class="input-field" placeholder="Deskripsi produk"></textarea>
         </div>
-        
+
         <div class="col-span-2">
           <label class="flex items-center space-x-2">
             <input v-model="form.is_active" type="checkbox" class="rounded border-gray-300 text-primary-600 focus:ring-primary-500">
@@ -69,11 +69,12 @@
             <p class="text-sm text-gray-500">PNG, JPG, WEBP maks. 2MB</p>
           </label>
         </div>
-        
+
         <div v-if="form.images.length > 0" class="flex gap-4 mt-4">
           <div v-for="(img, index) in form.images" :key="index" class="relative group">
             <img :src="img.url" class="w-20 h-20 object-cover rounded-lg" alt="Product image">
-            <button @click="removeImage(index)" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+            <!-- FIX: tambah type="button" biar nggak ikut submit form -->
+            <button type="button" @click="removeImage(index)" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity">
               <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
               </svg>
@@ -86,23 +87,25 @@
       <div class="mb-6">
         <div class="flex justify-between items-center mb-4">
           <h3 class="text-lg font-semibold">Varian Produk</h3>
-          <button @click="addVariant" class="btn-outline px-3 py-1 text-sm">+ Tambah Varian</button>
+          <!-- FIX: tambah type="button" biar nggak ikut submit form -->
+          <button type="button" @click="addVariant" class="btn-outline px-3 py-1 text-sm">+ Tambah Varian</button>
         </div>
-        
+
         <div v-if="form.variants.length === 0" class="text-center text-gray-500 py-6 border border-gray-200 rounded-lg">
           Belum ada varian. Tambahkan varian ukuran, warna, dan stok.
         </div>
-        
+
         <div v-for="(variant, index) in form.variants" :key="index" class="border rounded-lg p-4 mb-3">
           <div class="flex justify-between items-center mb-3">
             <p class="font-medium">Varian {{ index + 1 }}</p>
-            <button @click="removeVariant(index)" class="text-red-600 hover:text-red-700">
+            <!-- FIX: tambah type="button" biar nggak ikut submit form -->
+            <button type="button" @click="removeVariant(index)" class="text-red-600 hover:text-red-700">
               <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
               </svg>
             </button>
           </div>
-          
+
           <div class="grid grid-cols-3 gap-3">
             <div>
               <label class="block text-sm text-gray-600 mb-1">Ukuran</label>
@@ -113,18 +116,21 @@
               <input v-model="variant.color" type="text" class="input-field" placeholder="Hitam, Putih">
             </div>
             <div>
+              <!-- FIX: v-model.number biar kesimpen sebagai angka, bukan teks -->
               <label class="block text-sm text-gray-600 mb-1">Stok</label>
-              <input v-model="variant.stock" type="number" class="input-field" placeholder="0">
+              <input v-model.number="variant.stock" type="number" min="0" class="input-field" placeholder="0">
             </div>
           </div>
         </div>
       </div>
 
+      <p v-if="errorMessage" class="text-sm text-red-600 mb-4">{{ errorMessage }}</p>
+
       <!-- Actions -->
       <div class="flex justify-end space-x-3">
         <router-link to="/admin/products" class="btn-outline px-4 py-2">Batal</router-link>
-        <button type="submit" class="btn-primary px-4 py-2">
-          {{ isEdit ? 'Update Produk' : 'Simpan Produk' }}
+        <button type="submit" :disabled="isSaving" class="btn-primary px-4 py-2 disabled:opacity-50 disabled:cursor-not-allowed">
+          {{ isSaving ? 'Menyimpan...' : (isEdit ? 'Update Produk' : 'Simpan Produk') }}
         </button>
       </div>
     </form>
@@ -141,6 +147,8 @@ const router = useRouter()
 
 const isEdit = computed(() => !!route.params.id)
 const categories = ref([])
+const isSaving = ref(false)
+const errorMessage = ref('')
 
 const form = ref({
   name: '',
@@ -156,8 +164,8 @@ const form = ref({
 
 const fetchCategories = async () => {
   try {
-    const response = await api.get('/admin/categories')
-    categories.value = response.data
+    const response = await api.get('/categories')
+    categories.value = response.data.data || response.data
   } catch (error) {
     console.error('Failed to fetch categories:', error)
   }
@@ -165,11 +173,11 @@ const fetchCategories = async () => {
 
 const fetchProduct = async () => {
   if (!isEdit.value) return
-  
+
   try {
     const response = await api.get(`/admin/products/${route.params.id}`)
-    const product = response.data
-    
+    const product = response.data.data || response.data
+
     form.value = {
       name: product.name,
       category_id: product.category_id,
@@ -183,13 +191,13 @@ const fetchProduct = async () => {
     }
   } catch (error) {
     console.error('Failed to fetch product:', error)
-    alert('Gagal memuat data produk')
+    errorMessage.value = 'Gagal memuat data produk.'
   }
 }
 
 const handleImageUpload = (event) => {
   const files = event.target.files
-  
+
   for (const file of files) {
     const reader = new FileReader()
     reader.onload = (e) => {
@@ -219,6 +227,9 @@ const removeVariant = (index) => {
 }
 
 const saveProduct = async () => {
+  errorMessage.value = ''
+  isSaving.value = true
+
   try {
     const productData = {
       name: form.value.name,
@@ -228,19 +239,26 @@ const saveProduct = async () => {
       description: form.value.description,
       gender: form.value.gender,
       is_active: form.value.is_active,
-      variants: form.value.variants
+      variants: form.value.variants,
+      // TODO: gambar belum dikirim ke backend di sini.
+      // Karena upload gambar pakai file asli, biasanya butuh dikirim
+      // pakai FormData (multipart), bukan JSON biasa seperti ini.
+      // Diskusikan dulu sama temanmu: backend mau terima base64 string,
+      // atau butuh multipart/form-data upload beneran.
     }
-    
+
     if (isEdit.value) {
       await api.put(`/admin/products/${route.params.id}`, productData)
     } else {
       await api.post('/admin/products', productData)
     }
-    
+
     router.push('/admin/products')
   } catch (error) {
     console.error('Failed to save product:', error)
-    alert('Gagal menyimpan produk')
+    errorMessage.value = error?.response?.data?.message || 'Gagal menyimpan produk.'
+  } finally {
+    isSaving.value = false
   }
 }
 
